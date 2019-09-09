@@ -1,7 +1,7 @@
 
 
 
-## Global Word Representaion provided by Facebook AI Research!
+## Global Word Representation provided by Facebook AI Research!
 
 
 
