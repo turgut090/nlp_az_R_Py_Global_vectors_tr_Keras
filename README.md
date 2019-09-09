@@ -1,6 +1,8 @@
-<center>
+
+
 
 ## Global Word Representaion provided by Facebook Research!
+
 
 
 This repo shows the implementaion of loading the word embeddings into Keras model for Azerbaijani language in R and Python noteboooks.
