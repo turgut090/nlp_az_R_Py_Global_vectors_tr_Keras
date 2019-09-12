@@ -1,0 +1,139 @@
+---
+title: "Load_word_vectos_AZ"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r}
+library(data.table)
+library(dplyr)
+```
+
+
+```{r,eval=F}
+download.file('https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.az.300.vec.gz',
+              destfile = glue::glue("{getwd()}/cc.az.300.vec.gz"))
+```
+
+
+
+```{r}
+df = fread('https://raw.githubusercontent.com/QSS-Analytics/Datasets/master/nlp.csv',encoding = 'UTF-8')
+```
+
+```{r}
+wgt2 = data.table::fread('C:/Users/turgut.abdullayev/Downloads/cc.az.300.vec',data.table = F,skip = 1,
+                         encoding = 'UTF-8') %>%  rename(word=V1)
+```
+
+```{r}
+library(keras)
+max_words = 1e4
+maxlen = 30
+```
+
+
+```{r}
+word_seqs = text_tokenizer(num_words = max_words) %>%
+  fit_text_tokenizer(c(df$title))
+
+x_train = texts_to_sequences(word_seqs, df$title) %>%
+  pad_sequences( maxlen = maxlen)
+
+```
+
+
+```{r}
+y_train = as.matrix(df[['rating']])
+
+dic_words = wgt2$word
+
+wordindex = unlist(word_seqs$word_index)
+
+dic = data.frame(word=names(wordindex), key = wordindex,row.names = NULL) %>%
+  arrange(key) %>% .[1:max_words,]
+
+stringr::str_to_lower(dic$word)  %>% gsub(.,replacement = '',pattern = '[[:punct:]]|[[:digit:]]')->dic$word 
+
+dic[dic=='']=NA
+
+dic %>% tidyr::drop_na(word)->dic
+
+w_embed = dic  %>% left_join(wgt2)
+```
+
+
+```{r}
+J = ncol(w_embed)
+ndim = 300
+
+w_embed = w_embed [1:nrow(dic),3:J] %>%
+  mutate_all(as.numeric) %>%
+  mutate_all(round,6) %>%
+  mutate_all(funs(replace(., is.na(.), 0))) 
+
+
+w_embed = rbind(rep(0, ndim), w_embed) %>%
+  as.matrix()
+
+w_embed = list(array(w_embed , c(max_words, ndim)))
+
+inp = layer_input(shape = list(maxlen),
+                  dtype = "int32", name = "input")
+```
+
+
+```{r}
+model = inp %>%
+  layer_embedding(input_dim = max_words, output_dim = ndim, input_length = maxlen, 
+                  weights = w_embed, trainable=FALSE) %>%
+  layer_spatial_dropout_1d(rate=0.2) %>%
+  bidirectional(
+    layer_gru(units = 80, return_sequences = TRUE) 
+  )
+
+max_pool = model %>% layer_global_max_pooling_1d()
+ave_pool = model %>% layer_global_average_pooling_1d()
+
+```
+
+
+```{r}
+outp = layer_concatenate(list(ave_pool, max_pool)) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+model = keras_model(inp, outp)
+
+```
+
+```{r}
+model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = tensorflow::tf$keras$metrics$AUC()
+)
+
+
+history = model %>% fit(
+  x_train, y_train,
+  epochs = 15,
+  batch_size = 32,
+  validation_split = 0.1
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
