@@ -7,7 +7,7 @@
 
 This repo shows the implementaion of loading the word embeddings into Keras model for Azerbaijani language in R and Python noteboooks.
 
-Note: In Python notebook only Mac and Linux users will be able to run the example because __data.table__ is not available for Windows users.
+*Note: In Python notebook only Mac and Linux users will be able to run the example because __data.table__ is not available for Windows users.*
 
 We will add an additonal method for Windows users, as well but later.
 
